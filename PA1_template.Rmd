@@ -1,25 +1,167 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "Program Recherche reproductible Week 2"
+author: "F.Weinachter"
+date: "14/10/2019"
+output:
+  html_document: default
+  pdf_document: default
 ---
 
 
-## Loading and preprocessing the data
+```{r, echo=FALSE,message=FALSE, warning=FALSE}
+knitr::opts_chunk$set(error = TRUE)
+library(ggplot2)
+```
+
+**Loading and preprocessing the data**
+
+```{r message=FALSE, warning=FALSE}
+
+# unzip and open the file
+unzip(zipfile = "activity.zip", exdir = "activity")
+data<-read.csv("activity/activity.csv",header=TRUE,sep=",")
+
+# reformat "date"
+library(lubridate)
+data$date<-(ymd(data$date))
+
+```
+
+**What is mean total number of steps taken per day?**
+
+<span style="color: #26B260">Question 1 : Total number of steps taken per day</span>
+
+```{r message=TRUE, warning=TRUE}
+agg = aggregate(data$steps,by = list(data$date),FUN = sum)
+names(agg)<-c("Date","Number_of_steps")
+print(agg)
+```
+
+<span style="color: #26B260">Question 2 : Histogram of the total number of steps taken each day</span>
+
+```{r message=FALSE, warning=FALSE}
+
+p <- ggplot(agg, aes(x=Number_of_steps)) + geom_histogram(color="white", fill="#69b3a2",bins=30)+ theme_bw()+
+        xlab("Number of steps") +
+        ylab("Count") +ggtitle("total number of steps taken each day")
+print(p)
+
+```
+
+<span style="color: #26B260">Question 3 : Calculate and report the mean and median of the total number of steps taken per day</span>
+
+```{r}
+meanST<-as.integer(mean(agg$Number_of_steps, na.rm = TRUE))
+medianST<-median(agg$Number_of_steps , na.rm = TRUE)
+```
+
+<span style="background-color: #ffff99;">The average number of steps per day for this person is `r meanST` and the median number of steps per day for this person is `r medianST` <span/>
+
+**What is the average daily activity pattern?**
+
+<span style="color: #26B260">Question 1 : Time series plot of the 5-minute interval and the average number of steps taken<span/>
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+
+#calculation of the number of steps per interval
+mean_by_interval<-aggregate(data$steps,by = list(data$interval),FUN = mean,na.rm=TRUE)
+
+install.packages("plotly")
+library(plotly)
+install.packages("hrbrthemes")
+library(hrbrthemes)
+
+#plot describing the daily average steps by interval
+p <- mean_by_interval %>%
+        ggplot( aes(x=Group.1, y=x)) +
+        geom_area(fill="#69b3a2", alpha=0.5) +
+        geom_line(color="#69b3a2") + 
+        ggtitle("Average of daily steps by interval")+
+        ylab("Number of steps") +
+        xlab("Intervals") +
+        theme_ipsum()+
+        geom_vline(xintercept = 835,linetype="dotted",color = "red", size=0.2)
+
+p <- ggplotly(p)
+p
+```
+
+<span style="color: #26B260">Question 2 : Calculate which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?<span/>
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+l_max_st<-subset(mean_by_interval,x==max(x))
+max_st<-l_max_st[,1]
+max_dist<-as.integer(l_max_st[,2])
+```
+
+<span style="background-color: #ffff99;">The 5-minute interval, on average across all the days in the dataset, which contains the maximum number of steps is the `r max_st`th with `r max_dist` steps on average<span/>
+
+**Imputing missing values**
+
+<span style="color: #26B260">Question 1 : Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NA<span/>
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+sumNA<-sum(is.na(data))
+```
+
+<span style="background-color: #ffff99;">There is `r sumNA` NAs in this data<span/>
+
+<span style="color: #26B260">Question 2 :Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.<span/>
+
+<span style="background-color: #ffff99;">The strategy developed is to impute the NAs by the average of steps of the corresponding interval<span/>
+
+<span style="color: #26B260">Question 3 :Create a new dataset that is equal to the original dataset but with the missing data filled in.<span/>
+
+```{r echo=TRUE, message=FALSE, warning=FALSE}
+colnames(mean_by_interval)=c("interval","mean")
+data2<-merge(data,mean_by_interval,by="interval")
+b<-which(is.na(data2$steps))
+data2$steps[b]<-data2$mean[b]
+```
+
+<span style="color: #26B260">Question 4 :Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?<span/>
+
+```{r message=FALSE, warning=FALSE}
+agg2 = aggregate(data2$steps,by = list(data2$date),FUN = sum)
+names(agg2)<-c("Date","Number_of_steps")
+
+p2 <- ggplot(agg2, aes(x=Number_of_steps)) + geom_histogram(color="white", fill="#69b3a2",bins=30)+ theme_bw()+
+        xlab("Number of steps") +
+        ylab("Count") +ggtitle("total number of steps taken each day (after NAs imputation)")
+print(p2)
+```
+```{r}
+meanST2<-as.integer(mean(agg2$Number_of_steps, na.rm = TRUE))
+medianST2<-as.integer(median(agg2$Number_of_steps , na.rm = TRUE))
+```
+
+<span style="background-color: #ffff99;">The average number of steps per day for this person is AFTER NAs IMPUTATION `r meanST2` and the median number of steps per day for this person is `r medianST2`.
+
+These values don't vary from the calculation before imputation.<span/>
 
 
+<span style="background-color: #ffff99;">The imputation changes the mode of the distribution: the number of days the person walks between 10715 steps and 11430 steps from about 4 to more than 11<span/>
 
-## What is mean total number of steps taken per day?
+**Are there differences in activity patterns between weekdays and weekends?**
+
+<span style="color: #26B260">Question 1 :Create a new factor variable in the dataset with two levels “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.<span/>
+
+```{r message=FALSE, warning=FALSE}
+data2<-mutate(data2,wd=weekdays(data2$date))
+data2$wdi<-ifelse(data2$wd %in% c("lundi","mardi","mercredi","jeudi","vendredi"), "weekday","weekend")
+
+```
+
+<span style="color: #26B260">Question 2 :Make a panel plot with a time series plot of the 5-minute interval (x-axis) and the average number of steps taken (y-axis). <span/>
+
+```{r message=FALSE, warning=FALSE}
+data3<-aggregate(data2$steps,by=list(data2$interval,data2$wdi),FUN=mean)
+colnames(data3)<-c("intervals","weekday_indicator","number_of_steps")
 
 
+data3 %>%
+  ggplot( aes(x=intervals, y=number_of_steps, color=weekday_indicator)) +
+  labs(x = "intervals", y = "number of steps",title = "Average number of steps per time interval")+
+  geom_line()
 
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+```
